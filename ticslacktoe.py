@@ -1,21 +1,25 @@
 from flask import Flask, jsonify, request
 from flask_sqlalchemy import SQLAlchemy
+from flask_heroku import Heroku
 
 app = Flask(__name__)
 # app.config['SQLALCHEMY_DATABASE_URI'] = 'postgresql://localhost/ticslacktoe'
 heroku = Heroku(app)
 db = SQLAlchemy(app)
 
-# database models
+
 class Game(db.Model):
     id = db.Column(db.Integer, primary_key=True)
 
-    player1_id = db.Column(db.Integer, db.ForeignKey('player.id'))
-    player1 = db.relationship('Player')
+    channel_id = db.Column(db.String, unique=True)
+    team_id    = db.Column(db.String, unique=True)
+
+    player1_id     = db.Column(db.Integer, db.ForeignKey('player.id'))
+    player1        = db.relationship('Player')
     player1_marker = db.Column(db.String(1))
 
-    player2_id = db.Column(db.Integer, db.ForeignKey('player.id'))
-    player2 = db.relationship('Player')
+    player2_id     = db.Column(db.Integer, db.ForeignKey('player.id'))
+    player2        = db.relationship('Player')
     player2_marker = db.Column(db.String(1))
 
     turn = db.Column(db.Integer)  # 1 or 2 for player. TODO: change to Enum
@@ -25,19 +29,19 @@ class Game(db.Model):
         self.player2 = player2
 
     def __repr__(self):
-        return '<Game %r %r>' % self.player1.username, self.player2.username
+        return '<Game %r %r>' % self.player1.user_name, self.player2.user_name
 
 class Player(db.Model):
-    id = db.Column(db.Integer, primary_key=True)
-    user_id = db.Column(db.String, unique=True)
-    username = db.Column(db.String(80), unique=True)
+    id        = db.Column(db.Integer, primary_key=True)
+    user_id   = db.Column(db.String, unique=True)
+    user_name = db.Column(db.String)
 
-    def __init__(self, user_id, username):
+    def __init__(self, user_id, user_name):
         self.user_id = user_id
-        self.username = username
+        self.user_name = user_name
 
     def __repr__(self):
-        return '<Player %r>' % self.username
+        return '<Player %r>' % self.user_name
 
 class Piece(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -68,6 +72,8 @@ class Piece(db.Model):
 def show_board():
     # show the current tic tac toe board
     token        = request.form.get('token')
+    team_id      = request.form.get('team_id')
+    channel_id   = request.form.get('channel_id')
     user_id      = request.form.get('user_id')
     user_name    = request.form.get('user_name')
     command      = request.form.get('command')
@@ -85,30 +91,16 @@ def show_board():
         'text': 'Current tic tac toe board',
         'attachments': [
             {
-                'text': '---|---|---'
+                'pretext': user_id
+            },
+            {
+                'text': '%s' % user_name
             }
         ]
     }
 
     return jsonify(data)
 
-
-
-
-
-
-
-
 @app.route('/')
 def hello_world():
     return 'Hello, World!'
-
-@app.route('/user/<username>')
-def show_user_profile(username):
-    # show the user profile for that user
-    return 'User %s' % username
-
-@app.route('/post/<int:post_id>')
-def show_post(post_id):
-    # show the post with the given id, the id is an integer
-    return 'Post %d' % post_id
