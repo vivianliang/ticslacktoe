@@ -4,8 +4,8 @@ from ticslacktoe import db
 class Game(db.Model):
     id = db.Column(db.Integer, primary_key=True)
 
-    channel_id = db.Column(db.String, unique=True)
-    team_id = db.Column(db.String, unique=True)
+    team_id = db.Column(db.String)
+    channel_id = db.Column(db.String)
 
     player1_id = db.Column(db.Integer, db.ForeignKey('player.id'))
     player2_id = db.Column(db.Integer, db.ForeignKey('player.id'))
@@ -16,25 +16,25 @@ class Game(db.Model):
     # player1_marker = db.Column(db.String(1))
     # player2_marker = db.Column(db.String(1))
 
-    turn = db.Column(db.Integer)  # 1 or 2 for player. TODO: change to Enum
+    turn = db.Column(db.Integer, default=1)  # 1 or 2 for player. TODO: change to Enum
 
-    def __init__(self, channel_id, team_id, player1, player2):
-        self.channel_id = channel_id
+    def __init__(self, team_id, channel_id, player1, player2):
         self.team_id = team_id
+        self.channel_id = channel_id
         self.player1 = player1
         self.player2 = player2
 
     def __repr__(self):
-        return '<Game %r %r>' % self.player1.user_name, self.player2.user_name
+        return '<Game %r %r>' % (self.player1.user_name, self.player2.user_name)
 
 
 class Player(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    user_id = db.Column(db.String, unique=True)
+    team_id = db.Column(db.String)
     user_name = db.Column(db.String)
 
-    def __init__(self, user_id, user_name):
-        self.user_id = user_id
+    def __init__(self, team_id, user_name):
+        self.team_id = team_id
         self.user_name = user_name
 
     def __repr__(self):
@@ -64,4 +64,4 @@ class Piece(db.Model):
         self.position_y = position_y
 
     def __repr__(self):
-        return '<Piece %r %r>' % self.position_x, self.position_y
+        return '<Piece %r %r>' % (self.position_x, self.position_y)

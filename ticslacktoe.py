@@ -13,6 +13,7 @@ from models import Game, Piece, Player
 
 MAX_PIECES = 9
 
+
 def response_data(user_id, user_name, text):
     data = {
         'response_type': 'in_channel',
@@ -28,6 +29,14 @@ def response_data(user_id, user_name, text):
     }
     return jsonify(data)
 
+def get_or_create_player(team_id, user_name):
+    player = Player.query.filter_by(team_id=team_id, user_name=user_name).first()
+    if not player:
+        player = Player(team_id=team_id, user_name=user_name)
+        db.session.add(player)
+        db.session.commit()
+    return player
+
 
 @app.route('/', methods=['POST'])
 def show_board():
@@ -40,9 +49,10 @@ def show_board():
     text         = request.form.get('text')
     response_url = request.form.get('response_url')
 
-    # validate data and raise
+    # TODO: validate data and raise
 
     print token
+    print team_id
     print user_id, user_name
     print command
     print text
@@ -54,24 +64,36 @@ def show_board():
         # show board for current channel
         return response_data(user_id, user_name, 'show board')
 
-        # show the current tic tac toe board
     elif args[0] == 'startgame':
-        # args[1] - user_name of player to play with
+        if len(args) > 1:
+            requested_player_name = args[1]
+        else:
+            abort(400)  # TODO: include 'no user name provided' error message
 
         # TODO: verify that specified user is in the channel (RTM API)
 
-        if not args[1]:
-            abort(400)  # TODO: include 'no user name provided' error message
-
         # check if there is a game in progress
-        game = (Game.query.filter_by(team_id=team_id, channel_id=channel_id)
+        last_game = (Game.query.filter_by(team_id=team_id, channel_id=channel_id)
             .order_by(Game.id.desc())
             .first())
 
-        if game is not None:
-            is_done = game.pieces.count() == MAX_PIECES
+        if last_game is not None:
+            is_done = last_game.pieces.count() == MAX_PIECES
             if not is_done:
                 return response_data(user_id, user_name, 'game is in progress')
+
+        player1 = get_or_create_player(team_id, user_name)
+        player2 = get_or_create_player(team_id, requested_player_name)
+
+        game = Game(team_id, channel_id, player1, player2)
+        db.session.add(game)
+        db.session.commit()
+
+        print game.turn
+
+
+
+
 
 
 
