@@ -62,7 +62,13 @@ def show_board():
 
     if args[0] == 'showboard':
         # show board for current channel
-        return response_data(user_id, user_name, 'show board')
+        pieces = [' ' for x in xrange(9)]
+        board = """
+        |%s|%s|%s|
+        |%s|%s|%s|
+        |%s|%s|%s|
+        """ % (' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ')
+        return response_data(user_id, user_name, board)
 
     elif args[0] == 'startgame':
         if len(args) > 1:
