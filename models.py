@@ -13,12 +13,14 @@ class Game(db.Model):
     player1 = db.relationship('Player', foreign_keys=[player1_id])
     player2 = db.relationship('Player', foreign_keys=[player2_id])
 
-    player1_marker = db.Column(db.String(1))
-    player2_marker = db.Column(db.String(1))
+    # player1_marker = db.Column(db.String(1))
+    # player2_marker = db.Column(db.String(1))
 
     turn = db.Column(db.Integer)  # 1 or 2 for player. TODO: change to Enum
 
-    def __init__(self, player1, player2):
+    def __init__(self, channel_id, team_id, player1, player2):
+        self.channel_id = channel_id
+        self.team_id = team_id
         self.player1 = player1
         self.player2 = player2
 
