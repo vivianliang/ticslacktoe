@@ -12,7 +12,7 @@ db = SQLAlchemy(app)
 from models import Player
 
 
-@app.route('/show', methods=['POST'])
+@app.route('/', methods=['POST'])
 def show_board():
     # show the current tic tac toe board
     token        = request.form.get('token')
@@ -47,6 +47,15 @@ def show_board():
         # request_user = Player.query.filter_by(user_id=user_id).first()
         # if request_user is None:
         #     player = Player()
+        # game = Game.query.filter_by(team_id=team_id, channel_id=channel_id).first()
+        # if game is None:
+        #     # create new game for this channel
+        #     game = Game() # todo
+        #     db.session.add(game)
+        #     db.session.commit()
+        # else:
+            # start new game and update players
+
 
         data = {
             'response_type': 'in_channel',
@@ -64,6 +73,6 @@ def show_board():
     return jsonify(data)
 
 
-@app.route('/')
+@app.route('/hello')
 def hello_world():
     return 'Hello, World!'
