@@ -69,10 +69,11 @@ def show_board():
         # show board for current channel
         pieces = [' ' for x in xrange(9)]
         board = """
-        |%s|%s|%s|
-        |%s|%s|%s|
-        |%s|%s|%s|
-        """ % ('X', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ')
+            |%s|%s|%s|
+            |%s|%s|%s|
+            |%s|%s|%s|
+        """ % tuple(pieces)
+        # """ % ('X', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ')
         return response_data(user_id, user_name, board)
 
     elif args[0] == 'startgame':
@@ -89,7 +90,7 @@ def show_board():
             .first())
 
         if last_game is not None:
-            is_done = last_game.pieces.count() == MAX_PIECES
+            is_done = len(last_game.pieces) == MAX_PIECES
             if not is_done:
                 return response_data(user_id, user_name, 'game is in progress')
 
