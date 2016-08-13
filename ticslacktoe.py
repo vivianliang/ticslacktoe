@@ -1,10 +1,12 @@
+import os
+
 from flask import Flask, jsonify, request
 from flask_sqlalchemy import SQLAlchemy
 from flask_heroku import Heroku
 
 
 app = Flask(__name__)
-# app.config['SQLALCHEMY_DATABASE_URI'] = 'postgresql://localhost/ticslacktoe'
+app.config['SQLALCHEMY_DATABASE_URI'] = os.environ['DATABASE_URL']
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 heroku = Heroku(app)
 db = SQLAlchemy(app)
@@ -23,7 +25,7 @@ def response_data(user_id, user_name, text):
                 'pretext': user_id
             },
             {
-                'text': '%s %s' % (user_name, text)
+                'text': '%s' % (text)
             }
         ]
     }
@@ -40,7 +42,10 @@ def get_or_create_player(team_id, user_name):
 
 @app.route('/', methods=['POST'])
 def show_board():
+    print request
+    print request.form
     token        = request.form.get('token')
+    print 'token', token
     team_id      = request.form.get('team_id')
     channel_id   = request.form.get('channel_id')
     user_id      = request.form.get('user_id')
@@ -50,7 +55,7 @@ def show_board():
     response_url = request.form.get('response_url')
 
     # TODO: validate data and raise
-
+    print 'post'
     print token
     print team_id
     print user_id, user_name
@@ -67,7 +72,7 @@ def show_board():
         |%s|%s|%s|
         |%s|%s|%s|
         |%s|%s|%s|
-        """ % (' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ')
+        """ % ('X', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ')
         return response_data(user_id, user_name, board)
 
     elif args[0] == 'startgame':
@@ -121,4 +126,4 @@ def show_board():
 
 @app.route('/hello')
 def hello_world():
-    return 'Hello, World!'
+    return jsonify('Hello, World!')
