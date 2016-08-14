@@ -192,14 +192,14 @@ class TicSlackToeTestCase(TestCase):
         # Steve plays 1 0
         response = self.post_form('play 1 0')
         self.assertEqual(Piece.query.count(), 3)
-        text = response.json.get('attachments')[0].get('pre-text')
+        text = response.json.get('attachments')[0].get('pretext')
         self.assertEqual(text, 'Steve played piece 1 0')
 
         # Rosa plays 1 1 to win
         response = self.post_form(None, self.get_payload('play 1 1', 'Rosa'))
         self.assertEqual(Piece.query.count(), 4)
-        text = response.json.get('attachments')[0].get('pre-text')
-        self.assertEqual(text, 'Rosa is the winner')
+        text = response.json.get('attachments')[0].get('pretext')
+        self.assertEqual(text, '*Rosa is the winner!*')
         text = response.json.get('attachments')[0].get('text')
         self.assertEqual(text, "```|X| | |\n| |O| |\n| |X|O|```")
         # self.assertEqual(text, 'Rosa is the winner')

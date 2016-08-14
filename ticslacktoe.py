@@ -30,21 +30,21 @@ def response_data(text, color):
     }
     return jsonify(data)
 
-def board_response_data(board, current_game):
+def board_response_data(pretext, board, current_game):
     data = {
         'response_type': 'in_channel',
         'attachments': [
             {
+                'pretext': pretext,
                 'title': 'Current tic slack toe board',
                 'text': "```%s```" % board,
-                'mrkdwn_in': ['text']
+                'mrkdwn_in': ['pretext', 'text']
             }
         ]
     }
     if current_game is not None:
         data['attachments'].append({
-                'color': 'good',
-                'text': """Player 1 (X): %s\nPlayer 2 (O): %s\n*Current turn:* %s\n""" % (
+                'text': """*Player 1 (X):* %s\n*Player 2 (O):* %s\n*Current turn:* %s\n""" % (
                     current_game.player1.user_name,
                     current_game.player2.user_name,
                     current_game.turn.user_name),
@@ -52,20 +52,19 @@ def board_response_data(board, current_game):
             })
     return jsonify(data)
 
-def move_response_data(text, board):
-    data = {
-        'response_type': 'in_channel',
-        'attachments': [
-            {
-                'color': 'good',
-                'pre-text': text,
-                'title': 'Current tic slack toe board',
-                'text': "```%s```" % board,
-                'mrkdwn_in': ['text']
-            }
-        ]
-    }
-    return jsonify(data)
+# def move_response_data(text, board):
+#     data = {
+#         'response_type': 'in_channel',
+#         'attachments': [
+#             {
+#                 'pretext': text,
+#                 'title': 'Current tic slack toe board',
+#                 'text': "```%s```" % board,
+#                 'mrkdwn_in': ['pretext', 'text']
+#             }
+#         ]
+#     }
+#     return jsonify(data)
 
 def help_response_data():
     data = {
@@ -75,7 +74,7 @@ def help_response_data():
                 'title': 'Help is on the way!',
                 'text': (
                     "To connect your user name, `/ticslacktoe connect`\n"
-                    "To show current board, `/ticslacktoe show`.\n"
+                    "To show current board, `/ticslacktoe show`\n"
                     "To start a game, `/ticslacktoe start [username]`\n"
                     "To play a move on your turn, `/ticslacktoe play [x] [y]`, where x and y are "
                     "coordinates 0-2 on the board:\n"
@@ -159,7 +158,7 @@ def tic_slack_toe():
             "reconnect unless your Slack user name changes.") % player.user_name, 'good')
 
     elif args[0] == 'show':
-        return board_response_data(get_board(current_game), current_game)
+        return board_response_data('', get_board(current_game), current_game)
 
     # /ticslacktoe start [username]
     elif args[0] == 'start':
@@ -262,8 +261,9 @@ def play(current_game, team_id, user_name, x, y):
     if is_win():
         db.session.delete(current_game)
         db.session.commit()
-        return move_response_data("%s is the winner" % player.user_name, board)
-    return move_response_data("%s played piece %d %d" % (player.user_name, x, y), board)
+        return board_response_data("*%s is the winner!*" % player.user_name, board, current_game)
+    return board_response_data("%s played piece %d %d" % (player.user_name, x, y),
+        board, current_game)
 
 @app.route('/hello')
 def hello_world():
