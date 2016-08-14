@@ -36,7 +36,6 @@ def board_response_data(board, current_game):
         'attachments': [
             {
                 'title': 'Current tic slack toe board',
-                'color': 'good',
                 'text': "```%s```" % board,
                 'mrkdwn_in': ['text']
             }
@@ -53,6 +52,21 @@ def board_response_data(board, current_game):
             })
     return jsonify(data)
 
+def move_response_data(text, board):
+    data = {
+        'response_type': 'in_channel',
+        'attachments': [
+            {
+                'color': 'good',
+                'pre-text': text,
+                'title': 'Current tic slack toe board',
+                'text': "```%s```" % board,
+                'mrkdwn_in': ['text']
+            }
+        ]
+    }
+    return jsonify(data)
+
 def help_response_data():
     data = {
         'response_type': 'in_channel',
@@ -65,9 +79,7 @@ def help_response_data():
                     "To start a game, `/ticslacktoe start [username]`\n"
                     "To play a move on your turn, `/ticslacktoe play [x] [y]`, where x and y are "
                     "coordinates 0-2 on the board:\n"
-                    "```|0 2|1 2|2 2|\n"
-                    "|0 1|1 1|2 1|\n"
-                    "|0 0|1 0|2 0|```"
+                    "```|0 2|1 2|2 2|\n|0 1|1 1|2 1|\n|0 0|1 0|2 0|```"
                 ),
                 'mrkdwn_in': ['text']
             }
@@ -85,6 +97,25 @@ def get_or_create_player(team_id, user_name):
 
 def is_game_done(game):
     return game.pieces.count() == MAX_PIECES
+
+def get_board(current_game):
+    if current_game is not None:
+        pieces = current_game.pieces.order_by(Piece.position_y, Piece.position_x).all()
+        pieces = []
+        for y in xrange(2, -1, -1):
+            for x in xrange(3):
+                piece = current_game.pieces.filter_by(position_x=x, position_y=y).first()
+                if piece is None:
+                    pieces.append(' ')
+                elif piece.player is current_game.player1:
+                    pieces.append('X')
+                else:
+                    pieces.append('O')
+    else:
+        pieces = [' ' for x in xrange(9)]
+
+    return "|%s|%s|%s|\n|%s|%s|%s|\n|%s|%s|%s|" % tuple(pieces)
+
 
 @app.route('/', methods=['POST'])
 def tic_slack_toe():
@@ -127,7 +158,7 @@ def tic_slack_toe():
             "reconnect unless your Slack user name changes.") % player.user_name, 'good')
 
     elif args[0] == 'show':
-        return show_board(current_game)
+        return board_response_data(get_board(current_game), current_game)
 
     # /ticslacktoe start [username]
     elif args[0] == 'start':
@@ -172,25 +203,6 @@ def tic_slack_toe():
 
     else:
         return help_response_data()
-
-def show_board(current_game):
-    if current_game is not None:
-        pieces = current_game.pieces.order_by(Piece.position_y, Piece.position_x).all()
-        pieces = []
-        for y in xrange(2, -1, -1):
-            for x in xrange(3):
-                piece = current_game.pieces.filter_by(position_x=x, position_y=y).first()
-                if piece is None:
-                    pieces.append(' ')
-                elif piece.player is current_game.player1:
-                    pieces.append('X')
-                else:
-                    pieces.append('O')
-    else:
-        pieces = [' ' for x in xrange(9)]
-
-    board = "|%s|%s|%s|\n|%s|%s|%s|\n|%s|%s|%s|" % tuple(pieces)
-    return board_response_data(board, current_game)
 
 def play(current_game, team_id, user_name, x, y):
     def is_win():
@@ -241,11 +253,12 @@ def play(current_game, team_id, user_name, x, y):
     current_game.turn = other
     db.session.commit()
 
+    board = get_board(current_game)
+
     # check for win
     if is_win():
-        return response_data("%s is the winner" % player.user_name, 'good')
-
-    return response_data("%s played piece %d %d" % (player.user_name, x, y), 'good')
+        return move_response_data("%s is the winner" % player.user_name, board)
+    return move_response_data("%s played piece %d %d" % (player.user_name, x, y), board)
 
 @app.route('/hello')
 def hello_world():

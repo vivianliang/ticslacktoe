@@ -175,7 +175,7 @@ class TicSlackToeTestCase(TestCase):
         self.post_form('start Rosa')
 
         # Steve plays 0 2
-        self.post_form(None, self.get_payload('play 0 2'))
+        self.post_form('play 0 2')
         self.assertEqual(Piece.query.count(), 1)
         game = Game.query.first()
 
@@ -190,13 +190,15 @@ class TicSlackToeTestCase(TestCase):
         self.assertEqual(Piece.query.count(), 2)
 
         # Steve plays 1 0
-        self.post_form(None, self.get_payload('play 1 0'))
+        response = self.post_form('play 1 0')
         self.assertEqual(Piece.query.count(), 3)
+        text = response.json.get('attachments')[0].get('pre-text')
+        self.assertEqual(text, 'Steve played piece 1 0')
 
         # Rosa plays 1 1 to win
         response = self.post_form(None, self.get_payload('play 1 1', 'Rosa'))
         self.assertEqual(Piece.query.count(), 4)
-        text = response.json.get('attachments')[0].get('text')
+        text = response.json.get('attachments')[0].get('pre-text')
         self.assertEqual(text, 'Rosa is the winner')
 
         response = self.post_form('show')
