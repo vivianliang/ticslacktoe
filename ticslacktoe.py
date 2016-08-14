@@ -17,25 +17,67 @@ from models import Game, Piece, Player
 MAX_PIECES = 9
 PIECES_PER_ROW = 3
 
-
 def response_data(text):
     data = {
         'response_type': 'in_channel',
-        'text': 'Current tic tac toe board',
         'attachments': [
             {
-                'text': '%s' % text
-            },
+                'title': 'Tic slack toe error',
+                'color': 'danger',
+                'text': '%s' % text,
+            }
         ]
     }
     return jsonify(data)
 
-def default_response_data():
-    return response_data("""
-        /ticslacktoe showboard
-        /ticslacktoe startgame [username]
-        /ticslacktoe play [x] [y], where x and y are coordinates 0-2 on the board
-        """)
+def board_response_data(board, current_game):
+    data = {
+        'response_type': 'in_channel',
+        'attachments': [
+            {
+                'title': 'Current tic slack toe board',
+                'color': 'good',
+                'text': "```%s```" % board,
+                'mrkdwn_in': ['text']
+            }
+        ]
+    }
+    if current_game is not None:
+        data['attachments'].append({
+                'color': 'good',
+                'text': """*Player 1 (X):* %s\n*Player2 (O):* %s\n*Current turn: %s*\n""" % (
+                    current_game.player1.user_name,
+                    current_game.player2.user_name,
+                    current_game.turn.user_name),
+                'mrkdwn_in': ['text']
+            })
+    return jsonify(data)
+
+def help_response_data():
+    # return response_data("""
+    #     /ticslacktoe showboard
+    #     /ticslacktoe startgame [username]
+    #     /ticslacktoe play [x] [y], where x and y are coordinates 0-2 on the board
+    #     """)
+    data = {
+        'response_type': 'in_channel',
+        'attachments': [
+            {
+                'title': 'Tic slack toe help',
+                'text': (
+                    "To show current board, `/ticslacktoe show`.\n'"
+                    "To start a game, `/ticslacktoe startgame [username]`\n"
+                    "To play a move on your turn, `/ticslacktoe play [x] [y]`, where x and y are"
+                    "coordinates 0-2 on the board:\n"
+                    "```|0 2|1 2|2 2|"
+                    "|0 1|1 1|2 1|"
+                    "|0 0|1 0|2 0|```"
+                ),
+                'mrkdwn_in': ['text']
+            }
+        ]
+    }
+    return jsonify(data)
 
 def get_or_create_player(team_id, user_name):
     player = Player.query.filter_by(team_id=team_id, user_name=user_name).first()
@@ -45,6 +87,8 @@ def get_or_create_player(team_id, user_name):
         db.session.commit()
     return player
 
+def is_game_done(game):
+    return game.pieces.count() == MAX_PIECES
 
 @app.route('/', methods=['POST'])
 def tic_slack_toe():
@@ -69,10 +113,14 @@ def tic_slack_toe():
         .order_by(Game.id.desc())
         .first())
 
-    if len(args) == 0:
-        return default_response_data()
+    if len(args) == 0 or args[0] == 'help':
+        return help_response_data()
 
-    if args[0] == 'showboard':
+    if args[0] == 'connect':
+        # verify users here
+        pass
+
+    elif args[0] == 'showboard':
         return show_board(current_game)
 
     # /ticslacktoe startgame [username]
@@ -84,10 +132,8 @@ def tic_slack_toe():
 
         # TODO: verify that specified user is in the channel (RTM API)
 
-        if current_game is not None:
-            is_done = current_game.pieces.count() == MAX_PIECES
-            if not is_done:
-                return response_data('game is in progress')
+        if current_game is not None and not is_game_done(current_game):
+            return response_data('game is in progress')
 
         player1 = get_or_create_player(team_id, user_name)
         player2 = get_or_create_player(team_id, requested_player_name)
@@ -115,7 +161,7 @@ def tic_slack_toe():
         return play(current_game, team_id, user_name, x, y)
 
     else:
-        return default_response_data()
+        return help_response_data()
 
 def show_board(current_game):
     if current_game is not None:
@@ -134,7 +180,7 @@ def show_board(current_game):
         pieces = [' ' for x in xrange(9)]
 
     board = "|%s|%s|%s|\n|%s|%s|%s|\n|%s|%s|%s|" % tuple(pieces)
-    return response_data(board)
+    return board_response_data(board, current_game)
 
 def play(current_game, team_id, user_name, x, y):
     def is_win():

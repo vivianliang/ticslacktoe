@@ -90,7 +90,7 @@ class TicSlackToeTestCase(TestCase):
         response = self.post_form('showboard')
         text = response.json.get('attachments')[0].get('text')
         pieces = [' ' for x in xrange(9)]
-        expected_board = "|%s|%s|%s|\n|%s|%s|%s|\n|%s|%s|%s|" % tuple(pieces)
+        expected_board = "```|%s|%s|%s|\n|%s|%s|%s|\n|%s|%s|%s|```" % tuple(pieces)
         self.assertEqual(text, expected_board)
 
     # -------------------- #
@@ -107,7 +107,10 @@ class TicSlackToeTestCase(TestCase):
         pass
 
     def test_start_game_already_in_progress(self):
-        pass
+        self.post_form('startgame Rosa')
+        response = self.post_form('startgame Bob')
+        text = response.json.get('attachments')[0].get('text')
+        self.assertEqual(text, 'game is in progress')
 
     def test_get_or_create_players(self):
         pass
@@ -196,7 +199,7 @@ class TicSlackToeTestCase(TestCase):
         response = self.post_form('showboard')
         self.assertEqual(Piece.query.count(), 4)
         text = response.json.get('attachments')[0].get('text')
-        self.assertEqual(text, "|X| | |\n| |O| |\n| |X|O|")
+        self.assertEqual(text, "```|X| | |\n| |O| |\n| |X|O|```")
 
 if __name__ == '__main__':
     unittest.main()
