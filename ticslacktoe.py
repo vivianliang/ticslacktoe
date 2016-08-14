@@ -1,6 +1,7 @@
 import os
 
 from flask import Flask, jsonify, request
+# from flask_api import status
 from flask_sqlalchemy import SQLAlchemy
 from flask_heroku import Heroku
 
@@ -16,14 +17,11 @@ from models import Game, Piece, Player
 MAX_PIECES = 9
 
 
-def response_data(user_id, user_name, text):
+def response_data(text):
     data = {
         'response_type': 'in_channel',
         'text': 'Current tic tac toe board',
         'attachments': [
-            {
-                'pretext': user_id
-            },
             {
                 'text': '%s' % (text)
             }
@@ -41,11 +39,8 @@ def get_or_create_player(team_id, user_name):
 
 
 @app.route('/', methods=['POST'])
-def show_board():
-    print request
-    print request.form
+def tic_slack_toe():
     token        = request.form.get('token')
-    print 'token', token
     team_id      = request.form.get('team_id')
     channel_id   = request.form.get('channel_id')
     user_id      = request.form.get('user_id')
@@ -54,17 +49,19 @@ def show_board():
     text         = request.form.get('text')
     response_url = request.form.get('response_url')
 
-    # TODO: validate data and raise
-    print 'post'
-    print token
-    print team_id
-    print user_id, user_name
-    print command
-    print text
-    print response_url
+    if token != '6quahLsQgU7EJIOoENkl66vp':
+        return response_data('unauthorized')
+
+    # TODO: validate team_id, channel_id, user_id, user_name (RTM API)
 
     args = text.split()
 
+    current_game = (Game.query
+        .filter_by(team_id=team_id, channel_id=channel_id)
+        .order_by(Game.id.desc())
+        .first())
+
+    # /ticslacktoe showboard
     if args[0] == 'showboard':
         # show board for current channel
         pieces = [' ' for x in xrange(9)]
@@ -73,26 +70,20 @@ def show_board():
             |%s|%s|%s|
             |%s|%s|%s|
         """ % tuple(pieces)
-        # """ % ('X', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ')
-        return response_data(user_id, user_name, board)
+        return response_data(board)
 
+    # /ticslacktoe startgame [username]
     elif args[0] == 'startgame':
-        if len(args) > 1:
-            requested_player_name = args[1]
-        else:
-            abort(400)  # TODO: include 'no user name provided' error message
+        if len(args) < 2:
+            return response_data('invalid arguments. to start: /ticslacktoe startgame [username]')
+        requested_player_name = args[1]
 
         # TODO: verify that specified user is in the channel (RTM API)
 
-        # check if there is a game in progress
-        last_game = (Game.query.filter_by(team_id=team_id, channel_id=channel_id)
-            .order_by(Game.id.desc())
-            .first())
-
-        if last_game is not None:
-            is_done = len(last_game.pieces) == MAX_PIECES
+        if current_game is not None:
+            is_done = len(current_game.pieces) == MAX_PIECES
             if not is_done:
-                return response_data(user_id, user_name, 'game is in progress')
+                return response_data('game is in progress')
 
         player1 = get_or_create_player(team_id, user_name)
         player2 = get_or_create_player(team_id, requested_player_name)
@@ -101,28 +92,39 @@ def show_board():
         db.session.add(game)
         db.session.commit()
 
-        print game.turn
+        return response_data('new game started between %s and %s' %
+            (player1.user_name, player2.user_name))
 
+    # /ticslacktoe play [x] [y], where x and y are from 0-2
+    elif args[0] == 'play':
+        if len(args) < 3:
+            return response_data('invalid arguments. to play: /ticslacktoe play [x] [y]')
 
+        x = int(args[1])
+        y = int(args[2])
+        if x > 2 or y > 2:
+            return response_data('positions x and y must be between 0 and 2')
 
+        if current_game is None or len(current_game.pieces) == MAX_PIECES:
+            return response_data('must start game with: /ticslacktoe startgame [username]')
 
+        player1 = current_game.player1.user_name
+        player2 = current_game.player2.user_name
 
+        # only the players in the current game can play
+        player = Player.query.filter_by(team_id=team_id, user_name=user_name).first()
+        if not player:
+            return response_data("""
+                only the current players %s and %s can play.
+                any user can display the current board: /ticslacktoe showboard
+                """ % (player1, player2))
 
+        if player is not current_game.turn:
+            return response_data('it is %s\'s turn' % current_game.turn.user_name)
 
-        # request_user = Player.query.filter_by(user_id=user_id).first()
-        # if request_user is None:
-        #     player = Player()
-        # game = Game.query.filter_by(team_id=team_id, channel_id=channel_id).first()
-        # if game is None:
-        #     # create new game for this channel
-        #     game = Game() # todo
-        #     db.session.add(game)
-        #     db.session.commit()
-        # else:
-            # start new game and update players
-        return response_data(user_id, user_name, 'creating new game')
+        return response_data('playing turn')
 
-    return response_data(user_id, user_name, 'the end')
+    return response_data('the end')
 
 
 @app.route('/hello')

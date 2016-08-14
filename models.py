@@ -16,13 +16,16 @@ class Game(db.Model):
     # player1_marker = db.Column(db.String(1))
     # player2_marker = db.Column(db.String(1))
 
-    turn = db.Column(db.Integer, default=1)  # 1 or 2 for player. TODO: change to Enum
+    # turn = db.Column(db.Integer, default=1)  # 1 or 2 for player. TODO: change to Enum
+    turn_id = db.Column(db.Integer, db.ForeignKey('player.id'))
+    turn = db.relationship('Player', foreign_keys=[turn_id])
 
     def __init__(self, team_id, channel_id, player1, player2):
         self.team_id = team_id
         self.channel_id = channel_id
         self.player1 = player1
         self.player2 = player2
+        self.turn = player1
 
     def __repr__(self):
         return '<Game %r %r>' % (self.player1.user_name, self.player2.user_name)
