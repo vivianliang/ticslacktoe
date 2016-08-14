@@ -24,8 +24,8 @@ def response_data(text):
         'text': 'Current tic tac toe board',
         'attachments': [
             {
-                'text': '%s' % (text)
-            }
+                'text': '%s' % text
+            },
         ]
     }
     return jsonify(data)
@@ -73,7 +73,7 @@ def tic_slack_toe():
         return default_response_data()
 
     if args[0] == 'showboard':
-        return show_board()
+        return show_board(current_game)
 
     # /ticslacktoe startgame [username]
     elif args[0] == 'startgame':
@@ -117,10 +117,22 @@ def tic_slack_toe():
     else:
         return default_response_data()
 
-def show_board():
-    # pieces = current_game.pieces.order_by(Piece.position_x, Piece.position_y)
-    # pieces = []
-    pieces = [' ' for x in xrange(9)]
+def show_board(current_game):
+    if current_game is not None:
+        pieces = current_game.pieces.order_by(Piece.position_y, Piece.position_x).all()
+        pieces = []
+        for y in xrange(2, -1, -1):
+            for x in xrange(3):
+                piece = current_game.pieces.filter_by(position_x=x, position_y=y).first()
+                if piece is None:
+                    pieces.append(' ')
+                elif piece.player is current_game.player1:
+                    pieces.append('X')
+                else:
+                    pieces.append('O')
+    else:
+        pieces = [' ' for x in xrange(9)]
+
     board = "|%s|%s|%s|\n|%s|%s|%s|\n|%s|%s|%s|" % tuple(pieces)
     return response_data(board)
 

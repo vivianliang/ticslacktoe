@@ -193,6 +193,10 @@ class TicSlackToeTestCase(TestCase):
         text = response.json.get('attachments')[0].get('text')
         self.assertEqual(text, 'Rosa is the winner')
 
+        response = self.post_form('showboard')
+        self.assertEqual(Piece.query.count(), 4)
+        text = response.json.get('attachments')[0].get('text')
+        self.assertEqual(text, "|X| | |\n| |O| |\n| |X|O|")
 
 if __name__ == '__main__':
     unittest.main()
