@@ -65,11 +65,7 @@ def tic_slack_toe():
     if args[0] == 'showboard':
         # show board for current channel
         pieces = [' ' for x in xrange(9)]
-        board = """
-            |%s|%s|%s|
-            |%s|%s|%s|
-            |%s|%s|%s|
-        """ % tuple(pieces)
+        board = """|%s|%s|%s|\n|%s|%s|%s|\n|%s|%s|%s|""" % tuple(pieces)
         return response_data(board)
 
     # /ticslacktoe startgame [username]

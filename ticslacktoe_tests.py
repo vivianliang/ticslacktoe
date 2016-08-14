@@ -80,6 +80,7 @@ class TicSlackToeTestCase(TestCase):
         text = response.json.get('attachments')[0].get('text')
         pieces = [' ' for x in xrange(9)]
         expected_board = """
+
             |%s|%s|%s|
             |%s|%s|%s|
             |%s|%s|%s|
