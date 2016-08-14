@@ -60,7 +60,8 @@ def tic_slack_toe():
     text         = request.form.get('text')
     response_url = request.form.get('response_url')
 
-    # TODO: this is hard-coded for now. Test 28032589 is the only team that can access this app
+    # TODO: this is hard-coded for now. Test 28032589 is the only team that can access this app.
+    #       can be moved to an environment variable on Heroku
     if token != '6quahLsQgU7EJIOoENkl66vp':
         return response_data('Unauthorized request', 'danger')
 
@@ -120,7 +121,8 @@ def tic_slack_toe():
         db.session.add(game)
         db.session.commit()
 
-        msg = 'New game started between %s and %s' % (player1.user_name, player2.user_name)
+        msg = 'New game started between %s and %s. ' % (player1.user_name, player2.user_name)
+        msg += '%s begins' % (player1.user_name)
         return response_data(msg, 'good')
 
     elif args[0] == 'play':

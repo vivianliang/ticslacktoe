@@ -123,7 +123,7 @@ class TicSlackToeTestCase(TestCase):
     def test_create_game_and_players(self):
         response = self.post_form('start Rosa')
         text = response.json.get('attachments')[0].get('text')
-        self.assertEqual(text, 'New game started between Steve and Rosa')
+        self.assertEqual(text, 'New game started between Steve and Rosa. Steve begins')
 
         self.assertEqual(Game.query.count(), 1)
 
