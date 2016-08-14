@@ -15,6 +15,7 @@ class Game(db.Model):
 
     # player1_marker = db.Column(db.String(1))
     # player2_marker = db.Column(db.String(1))
+    pieces = db.relationship('Piece', backref='game', lazy='dynamic')
 
     # turn = db.Column(db.Integer, default=1)  # 1 or 2 for player. TODO: change to Enum
     turn_id = db.Column(db.Integer, db.ForeignKey('player.id'))
@@ -48,7 +49,7 @@ class Piece(db.Model):
     id = db.Column(db.Integer, primary_key=True)
 
     game_id = db.Column(db.Integer, db.ForeignKey('game.id'))
-    game = db.relationship('Game', backref=db.backref('pieces'))
+    # game = db.relationship('Game', backref=db.backref('pieces'))
 
     player_id = db.Column(db.Integer, db.ForeignKey('player.id'))
     player = db.relationship('Player', backref=db.backref('pieces'))

@@ -75,16 +75,22 @@ class TicSlackToeTestCase(TestCase):
         assert game in db.session
         self.assertEqual(game.turn, player1)
 
+    def test_default_response(self):
+        response = self.post_form('')
+        text = response.json.get('attachments')[0].get('text')
+        self.assertIn('/ticslacktoe', text)
+        self.assertIn('where x and y are coordinates', text)
+
+        response = self.post_form('invalid')
+        text = response.json.get('attachments')[0].get('text')
+        self.assertIn('/ticslacktoe', text)
+        self.assertIn('where x and y are coordinates', text)
+
     def test_show_board(self):
         response = self.post_form('showboard')
         text = response.json.get('attachments')[0].get('text')
         pieces = [' ' for x in xrange(9)]
-        expected_board = """
-
-            |%s|%s|%s|
-            |%s|%s|%s|
-            |%s|%s|%s|
-        """ % tuple(pieces)
+        expected_board = "|%s|%s|%s|\n|%s|%s|%s|\n|%s|%s|%s|" % tuple(pieces)
         self.assertEqual(text, expected_board)
 
     # -------------------- #
@@ -128,18 +134,65 @@ class TicSlackToeTestCase(TestCase):
         text = response.json.get('attachments')[0].get('text')
         self.assertEqual(text, 'invalid arguments. to play: /ticslacktoe play [x] [y]')
 
+        response = self.post_form('play abc def')
+        text = response.json.get('attachments')[0].get('text')
+        self.assertEqual(text, 'positions x and y must be integers between 0 and 2')
+
+        response = self.post_form('play -1 0')
+        text = response.json.get('attachments')[0].get('text')
+        self.assertEqual(text, 'positions x and y must be integers between 0 and 2')
+
     def test_play_game_no_game_in_progress(self):
         response = self.post_form('play 0 1')
         text = response.json.get('attachments')[0].get('text')
         self.assertEqual(text, 'must start game with: /ticslacktoe startgame [username]')
 
-    def test_play_game_other_players_turn(self):
+    def test_play_game_non_player(self):
         # game started between Steve and Rosa
-        response = self.post_form('startgame Rosa')
+        self.post_form('startgame Rosa')
+
         # play attempted by Bob
         response = self.post_form(None, self.get_payload('play 0 1', 'Bob'))
         text = response.json.get('attachments')[0].get('text')
-        self.assertIn('only the current players Steve and Rosa can play', text)
+        self.assertEqual(text, 'only the current players Steve and Rosa can play')
+
+    def test_play_game_other_players_turn(self):
+        # game started between Steve and Rosa. it is Steve's turn to start
+        self.post_form('startgame Rosa')
+
+        # play attempted by Rosa
+        response = self.post_form(None, self.get_payload('play 0 1', 'Rosa'))
+        text = response.json.get('attachments')[0].get('text')
+        self.assertEqual(text, "it is Steve's turn")
+
+    def test_play(self):
+        self.post_form('startgame Rosa')
+
+        # Steve plays 0 2
+        self.post_form(None, self.get_payload('play 0 2'))
+        self.assertEqual(Piece.query.count(), 1)
+        game = Game.query.first()
+
+        # Rosa attempts to plays 0 2 again
+        response = self.post_form(None, self.get_payload('play 0 2', 'Rosa'))
+        text = response.json.get('attachments')[0].get('text')
+        self.assertEqual(text, 'position 0 2 is already taken')
+        self.assertEqual(Piece.query.count(), 1)
+
+        # Rosa plays 2 0
+        response = self.post_form(None, self.get_payload('play 2 0', 'Rosa'))
+        self.assertEqual(Piece.query.count(), 2)
+
+        # Steve plays 1 0
+        self.post_form(None, self.get_payload('play 1 0'))
+        self.assertEqual(Piece.query.count(), 3)
+
+        # Rosa plays 1 1 to win
+        response = self.post_form(None, self.get_payload('play 1 1', 'Rosa'))
+        self.assertEqual(Piece.query.count(), 4)
+        text = response.json.get('attachments')[0].get('text')
+        self.assertEqual(text, 'Rosa is the winner')
+
 
 if __name__ == '__main__':
     unittest.main()
