@@ -188,6 +188,8 @@ class TicSlackToeTestCase(TestCase):
         # Rosa plays 2 0
         response = self.post_form(None, self.get_payload('play 2 0', 'Rosa'))
         self.assertEqual(Piece.query.count(), 2)
+        text = response.json.get('attachments')[0].get('pretext')
+        self.assertEqual(text, 'Rosa played piece 2 0')
 
         # Steve plays 1 0
         response = self.post_form('play 1 0')
@@ -195,19 +197,39 @@ class TicSlackToeTestCase(TestCase):
         text = response.json.get('attachments')[0].get('pretext')
         self.assertEqual(text, 'Steve played piece 1 0')
 
-        # Rosa plays 1 1 to win
-        response = self.post_form(None, self.get_payload('play 1 1', 'Rosa'))
+        # Rosa plays 2 1
+        response = self.post_form(None, self.get_payload('play 2 1', 'Rosa'))
         self.assertEqual(Piece.query.count(), 4)
         text = response.json.get('attachments')[0].get('pretext')
-        self.assertEqual(text, '*Rosa is the winner!*')
-        text = response.json.get('attachments')[0].get('text')
-        self.assertEqual(text, "```|X| | |\n| |O| |\n| |X|O|```")
-        # self.assertEqual(text, 'Rosa is the winner')
+        self.assertEqual(text, 'Rosa played piece 2 1')
 
-        # response = self.post_form('show')
-        # self.assertEqual(Piece.query.count(), 4)
-        # text = response.json.get('attachments')[0].get('text')
-        # self.assertEqual(text, "```|X| | |\n| |O| |\n| |X|O|```")
+        # Steve plays 1 1
+        response = self.post_form('play 1 1')
+        self.assertEqual(Piece.query.count(), 5)
+        text = response.json.get('attachments')[0].get('pretext')
+        self.assertEqual(text, 'Steve played piece 1 1')
+
+        # Rosa plays 2 2 to win
+        response = self.post_form(None, self.get_payload('play 2 2', 'Rosa'))
+        self.assertEqual(Piece.query.count(), 6)
+        text = response.json.get('attachments')[0].get('pretext')
+        self.assertEqual(text, '*Game over: Rosa is the winner!*')
+        text = response.json.get('attachments')[0].get('text')
+        self.assertEqual(text, "```|X| |O|\n| |X|O|\n| |X|O|```")
+
+    def test_play_draw(self):
+        self.post_form('start Rosa')
+        self.post_form('play 0 0')
+        self.post_form(None, self.get_payload('play 0 1', 'Rosa'))
+        self.post_form('play 1 0')
+        self.post_form(None, self.get_payload('play 1 1', 'Rosa'))
+        self.post_form('play 2 1')
+        self.post_form(None, self.get_payload('play 2 0', 'Rosa'))
+        self.post_form('play 0 2')
+        self.post_form(None, self.get_payload('play 1 2', 'Rosa'))
+        response = self.post_form('play 2 2')
+        text = response.json.get('attachments')[0].get('pretext')
+        self.assertEqual(text, "*Game over: It's a draw!*")
 
 if __name__ == '__main__':
     unittest.main()

@@ -203,7 +203,8 @@ def play(current_game, team_id, user_name, x, y):
 
         # check for 3 pieces in the north-east diagonal
         north_east_diagonal_pieces = filter(None, [
-            current_game.pieces.filter_by(position_x=z, position_y=z).first() for z in xrange(3)])
+            current_game.pieces.filter_by(
+                position_x=z, position_y=z, player=player).first() for z in xrange(3)])
 
         if len(north_east_diagonal_pieces) == PIECES_PER_ROW:
             return True
@@ -211,7 +212,8 @@ def play(current_game, team_id, user_name, x, y):
         # check for 3 pieces in the north-west diagonal
         coords = [(0,2), (1,1), (2,0)]
         north_west_diagonal_pieces = filter(None, [
-            current_game.pieces.filter_by(position_x=i, position_y=j).first() for i, j in coords])
+            current_game.pieces.filter_by(
+                position_x=i, position_y=j, player=player).first() for i, j in coords])
         return len(north_west_diagonal_pieces) == PIECES_PER_ROW
 
     # game has not been started
@@ -249,7 +251,15 @@ def play(current_game, team_id, user_name, x, y):
         db.session.delete(current_game)
         db.session.commit()
         return board_response_data(
-            "*%s is the winner!*" % player.user_name, board, current_game, True)
+            "*Game over: %s is the winner!*" % player.user_name, board, current_game, True)
+
+    # check for draw
+    if current_game.pieces.count() == MAX_PIECES:
+        db.session.delete(current_game)
+        db.session.commit()
+        return board_response_data(
+            "*Game over: It's a draw!*", board, current_game)
+
     return board_response_data(
         "%s played piece %d %d" % (player.user_name, x, y), board, current_game)
 
