@@ -17,14 +17,14 @@ from models import Game, Piece, Player
 MAX_PIECES = 9
 PIECES_PER_ROW = 3
 
-def response_data(text):
+def response_data(text, color):
     data = {
         'response_type': 'in_channel',
         'attachments': [
             {
-                'title': 'Tic slack toe error',
-                'color': 'danger',
+                'color': color,
                 'text': '%s' % text,
+                'mrkdwn_in': ['text']
             }
         ]
     }
@@ -45,7 +45,7 @@ def board_response_data(board, current_game):
     if current_game is not None:
         data['attachments'].append({
                 'color': 'good',
-                'text': """*Player 1 (X):* %s\n*Player2 (O):* %s\n*Current turn: %s*\n""" % (
+                'text': """Player 1 (X): %s\nPlayer 2 (O): %s\n*Current turn:* %s\n""" % (
                     current_game.player1.user_name,
                     current_game.player2.user_name,
                     current_game.turn.user_name),
@@ -54,23 +54,19 @@ def board_response_data(board, current_game):
     return jsonify(data)
 
 def help_response_data():
-    # return response_data("""
-    #     /ticslacktoe showboard
-    #     /ticslacktoe startgame [username]
-    #     /ticslacktoe play [x] [y], where x and y are coordinates 0-2 on the board
-    #     """)
     data = {
         'response_type': 'in_channel',
         'attachments': [
             {
-                'title': 'Tic slack toe help',
+                'title': 'Help is on the way!',
                 'text': (
-                    "To show current board, `/ticslacktoe show`.\n'"
-                    "To start a game, `/ticslacktoe startgame [username]`\n"
-                    "To play a move on your turn, `/ticslacktoe play [x] [y]`, where x and y are"
+                    "To connect your user name, `/ticslacktoe connect`\n"
+                    "To show current board, `/ticslacktoe show`.\n"
+                    "To start a game, `/ticslacktoe start [username]`\n"
+                    "To play a move on your turn, `/ticslacktoe play [x] [y]`, where x and y are "
                     "coordinates 0-2 on the board:\n"
-                    "```|0 2|1 2|2 2|"
-                    "|0 1|1 1|2 1|"
+                    "```|0 2|1 2|2 2|\n"
+                    "|0 1|1 1|2 1|\n"
                     "|0 0|1 0|2 0|```"
                 ),
                 'mrkdwn_in': ['text']
@@ -102,9 +98,9 @@ def tic_slack_toe():
     response_url = request.form.get('response_url')
 
     if token != '6quahLsQgU7EJIOoENkl66vp':
-        return response_data('unauthorized')
+        return response_data('Unauthorized request', 'danger')
 
-    # TODO: validate team_id, channel_id, user_id, user_name (RTM API)
+    # TODO: future improvement - verify user, team, channel via RTM API
 
     args = text.split()
 
@@ -117,46 +113,60 @@ def tic_slack_toe():
         return help_response_data()
 
     if args[0] == 'connect':
-        # verify users here
-        pass
+        # TODO: future improvement - verify user via RTM API
+        player = Player.query.filter_by(team_id=team_id, user_name=user_name).first()
+        if player is not None:
+            return response_data(
+                'User %s has already connected to tic-slack-toe' % player.user_name, 'warning')
 
-    elif args[0] == 'showboard':
+        player = Player(team_id=team_id, user_name=user_name)
+        db.session.add(player)
+        db.session.commit()
+        return response_data((
+            "You (%s) are now connected to tic-slack-toe. There is no need to"
+            "reconnect unless your Slack user name changes.") % player.user_name, 'good')
+
+    elif args[0] == 'show':
         return show_board(current_game)
 
-    # /ticslacktoe startgame [username]
-    elif args[0] == 'startgame':
+    # /ticslacktoe start [username]
+    elif args[0] == 'start':
         if len(args) < 2:
-            return response_data('invalid arguments. to start: /ticslacktoe startgame [username]')
+            return response_data(
+                'Invalid arguments. to start: `/ticslacktoe start [username]`', 'danger')
 
         requested_player_name = args[1]
 
-        # TODO: verify that specified user is in the channel (RTM API)
+        player2 = Player.query.filter_by(team_id=team_id, user_name=requested_player_name).first()
+        if player2 is None:
+            return response_data(
+                "User %s needs to connect to tic-slack-toe with `/ticslacktoe connect`" %
+                requested_player_name, 'danger')
 
         if current_game is not None and not is_game_done(current_game):
-            return response_data('game is in progress')
+            return response_data('A game is already in progress', 'warning')
 
         player1 = get_or_create_player(team_id, user_name)
-        player2 = get_or_create_player(team_id, requested_player_name)
 
         game = Game(team_id, channel_id, player1, player2)
         db.session.add(game)
         db.session.commit()
 
-        return response_data('new game started between %s and %s' %
-            (player1.user_name, player2.user_name))
+        return response_data('New game started between %s and %s' %
+            (player1.user_name, player2.user_name), 'good')
 
     # /ticslacktoe play [x] [y], where x and y are from 0-2
     elif args[0] == 'play':
         if len(args) < 3:
-            return response_data('invalid arguments. to play: /ticslacktoe play [x] [y]')
+            return response_data('Invalid arguments. to play: `/ticslacktoe play [x] [y]`', 'danger')
 
         try:
             x, y = int(args[1]), int(args[2])
         except ValueError:
-            return response_data('positions x and y must be integers between 0 and 2')
+            return response_data('Positions x and y must be integers between 0 and 2', 'danger')
 
         if x < 0 or x > 2 or y < 0 or y > 2:
-            return response_data('positions x and y must be integers between 0 and 2')
+            return response_data('Positions x and y must be integers between 0 and 2', 'danger')
 
         return play(current_game, team_id, user_name, x, y)
 
@@ -206,21 +216,21 @@ def play(current_game, team_id, user_name, x, y):
 
     # game has not been started
     if current_game is None or current_game.pieces.count() == MAX_PIECES:
-        return response_data('must start game with: /ticslacktoe startgame [username]')
+        return response_data('Must start game with: `/ticslacktoe start [username]`', 'warning')
 
     # only the players in the current game can play
     player = Player.query.filter_by(team_id=team_id, user_name=user_name).first()
     if not player:
-        return response_data("only the current players %s and %s can play" %
-            (current_game.player1.user_name, current_game.player2.user_name))
+        return response_data("Only the current players %s and %s can play" %
+            (current_game.player1.user_name, current_game.player2.user_name), 'warning')
 
     # it is not user's turn
     if player is not current_game.turn:
-        return response_data("it is %s's turn" % current_game.turn.user_name)
+        return response_data("It is %s's turn" % current_game.turn.user_name, 'warning')
 
     # the position on the board is already taken
     if Piece.query.filter_by(game=current_game, position_x=x, position_y=y).first():
-        return response_data("position %d %d is already taken" % (x, y))
+        return response_data("Position %d %d is already taken" % (x, y), 'warning')
 
     # add the game piece
     piece = Piece(current_game, player, x, y)
@@ -233,9 +243,9 @@ def play(current_game, team_id, user_name, x, y):
 
     # check for win
     if is_win():
-        return response_data("%s is the winner" % player.user_name)
+        return response_data("%s is the winner" % player.user_name, 'good')
 
-    return response_data('playing turn')
+    return response_data("%s played piece %d %d" % (player.user_name, x, y), 'good')
 
 @app.route('/hello')
 def hello_world():
