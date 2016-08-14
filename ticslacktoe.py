@@ -30,11 +30,12 @@ def response_data(text, color):
     }
     return jsonify(data)
 
-def board_response_data(pretext, board, current_game):
+def board_response_data(pretext, board, current_game, win=False):
     data = {
         'response_type': 'in_channel',
         'attachments': [
             {
+                'color': 'good' if win else None,
                 'pretext': pretext,
                 'title': 'Current tic slack toe board',
                 'text': "```%s```" % board,
@@ -42,7 +43,7 @@ def board_response_data(pretext, board, current_game):
             }
         ]
     }
-    if current_game is not None:
+    if current_game is not None and not win:
         data['attachments'].append({
                 'text': """*Player 1 (X):* %s\n*Player 2 (O):* %s\n*Current turn:* %s\n""" % (
                     current_game.player1.user_name,
@@ -51,20 +52,6 @@ def board_response_data(pretext, board, current_game):
                 'mrkdwn_in': ['text']
             })
     return jsonify(data)
-
-# def move_response_data(text, board):
-#     data = {
-#         'response_type': 'in_channel',
-#         'attachments': [
-#             {
-#                 'pretext': text,
-#                 'title': 'Current tic slack toe board',
-#                 'text': "```%s```" % board,
-#                 'mrkdwn_in': ['pretext', 'text']
-#             }
-#         ]
-#     }
-#     return jsonify(data)
 
 def help_response_data():
     data = {
@@ -261,9 +248,10 @@ def play(current_game, team_id, user_name, x, y):
     if is_win():
         db.session.delete(current_game)
         db.session.commit()
-        return board_response_data("*%s is the winner!*" % player.user_name, board, current_game)
-    return board_response_data("%s played piece %d %d" % (player.user_name, x, y),
-        board, current_game)
+        return board_response_data(
+            "*%s is the winner!*" % player.user_name, board, current_game, True)
+    return board_response_data(
+        "%s played piece %d %d" % (player.user_name, x, y), board, current_game)
 
 @app.route('/hello')
 def hello_world():
