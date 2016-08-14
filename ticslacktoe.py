@@ -95,8 +95,8 @@ def get_or_create_player(team_id, user_name):
         db.session.commit()
     return player
 
-def is_game_done(game):
-    return game.pieces.count() == MAX_PIECES
+# def is_game_done(game):
+#     return game.pieces.count() == MAX_PIECES
 
 def get_board(current_game):
     if current_game is not None:
@@ -135,6 +135,7 @@ def tic_slack_toe():
 
     args = text.split()
 
+    # TODO: now that we're deleting the game, we can just get the one and only game
     current_game = (Game.query
         .filter_by(team_id=team_id, channel_id=channel_id)
         .order_by(Game.id.desc())
@@ -174,7 +175,8 @@ def tic_slack_toe():
                 "User %s needs to connect to tic-slack-toe with `/ticslacktoe connect`" %
                 requested_player_name, 'danger')
 
-        if current_game is not None and not is_game_done(current_game):
+        # if current_game is not None and not is_game_done(current_game):
+        if current_game is not None:
             return response_data('A game is already in progress', 'warning')
 
         player1 = get_or_create_player(team_id, user_name)
@@ -227,7 +229,8 @@ def play(current_game, team_id, user_name, x, y):
         return len(north_west_diagonal_pieces) == PIECES_PER_ROW
 
     # game has not been started
-    if current_game is None or current_game.pieces.count() == MAX_PIECES:
+    # if current_game is None or current_game.pieces.count() == MAX_PIECES:
+    if current_game is None:
         return response_data('Must start game with: `/ticslacktoe start [username]`', 'warning')
 
     # only the players in the current game can play
@@ -257,6 +260,8 @@ def play(current_game, team_id, user_name, x, y):
 
     # check for win
     if is_win():
+        db.session.delete(current_game)
+        db.session.commit()
         return move_response_data("%s is the winner" % player.user_name, board)
     return move_response_data("%s played piece %d %d" % (player.user_name, x, y), board)
 
