@@ -48,7 +48,7 @@ def help_response_data():
                 'text': (
                     "To connect your user name, `/ticslacktoe connect`\n"
                     "To show current board, `/ticslacktoe show`\n"
-                    "To start a game, `/ticslacktoe start [username]`\n"
+                    "To start a game with another user, `/ticslacktoe start [username]`\n"
                     "To play a move on your turn, `/ticslacktoe play [x] [y]`, where x and y are "
                     "coordinates 0-2 on the board:\n"
                     "```|0 2|1 2|2 2|\n|0 1|1 1|2 1|\n|0 0|1 0|2 0|```"

@@ -64,6 +64,8 @@ def tic_slack_toe():
     text         = request.form.get('text')
     response_url = request.form.get('response_url')
 
+    # currently, this token verifies the POST comes from our specific Slack team
+    # TODO: setup OAuth and verify channel/team/users via Slack API
     if token != SLACK_SLASH_COMMAND_TOKEN:
         return response_data('Unauthorized request', 'danger')
 
@@ -103,7 +105,7 @@ def tic_slack_toe():
 
         player1 = get_or_create_player(team_id, user_name)
         if player1.user_name == requested_player_name:
-            return response_data('Cannot start game a game against oneself', 'danger')
+            return response_data('Cannot start a game against oneself', 'danger')
 
         # requested player must have self-connected with the app previously
         player2 = Player.query.filter_by(team_id=team_id, user_name=requested_player_name).first()
