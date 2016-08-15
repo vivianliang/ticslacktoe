@@ -4,14 +4,16 @@ A tic slack toe slash command for Slack
 
 ## Usage
 
-The app is hosted at `https://tickslacktoe.herokuapp.com/`. (Note spelling tic**k**).
-Since the Heroku free dyno goes to sleep, please visit that URL in the browser before
-accessing via Slack.
+The app is hosted at https://tickslacktoe.herokuapp.com/. (Note spelling tic**k**).
+
+**Important! Since the Heroku free dyno goes to sleep, please visit that URL in the browser before
+accessing via Slack.**
 
 In the Slack team where the app is installed, use:
 `/ticslacktoe help` to see usage commands.
 
-1. To connect your username `/ticslacktoe connect`
+1. To register your username `/ticslacktoe connect`. A user is automatically registered if they
+   start the game via `/ticslacktoe start [username]`.
 2. To show current board `/ticslacktoe show`
 3. To start a game with another user `/ticslacktoe start [username]` where username is a user
    that has connected (1) at some time.
@@ -23,3 +25,7 @@ In the Slack team where the app is installed, use:
 |0 1|1 1|2 1|
 |0 0|1 0|2 0|
 ```
+
+## Tests
+
+To run tests, `python ticslacktoe_tests.py`
