@@ -6,6 +6,7 @@ def response_data(text, color):
         'response_type': 'in_channel',
         'attachments': [
             {
+                'fallback': 'Status',
                 'color': color,
                 'text': '%s' % text,
                 'mrkdwn_in': ['text']
@@ -19,6 +20,7 @@ def board_response_data(pretext, board, current_game, win=False):
         'response_type': 'in_channel',
         'attachments': [
             {
+                'fallback': 'Current tic slack toe board',
                 'color': 'good' if win else None,
                 'pretext': pretext,
                 'title': 'Current tic slack toe board',
@@ -44,6 +46,7 @@ def help_response_data():
         'response_type': 'in_channel',
         'attachments': [
             {
+                'fallback': 'Help',
                 'title': 'Help is on the way!',
                 'text': (
                     "To connect your user name, `/ticslacktoe connect`\n"
