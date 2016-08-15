@@ -9,6 +9,9 @@ app = Flask(__name__)
 app.config['SQLALCHEMY_DATABASE_URI'] = os.environ['DATABASE_URL']
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
+# hardcoded for tests. should live in environment variable
+SLACK_SLASH_COMMAND_TOKEN = '6quahLsQgU7EJIOoENkl66vp'
+
 heroku = Heroku(app)
 db = SQLAlchemy(app)
 
@@ -61,9 +64,7 @@ def tic_slack_toe():
     text         = request.form.get('text')
     response_url = request.form.get('response_url')
 
-    # TODO: this is hard-coded for now. Test 28032589 is the only team that can access this app.
-    #       can be moved to an environment variable on Heroku
-    if token != '6quahLsQgU7EJIOoENkl66vp':
+    if token != SLACK_SLASH_COMMAND_TOKEN:
         return response_data('Unauthorized request', 'danger')
 
     args = text.split()
@@ -74,32 +75,35 @@ def tic_slack_toe():
         return help_response_data()
 
     if args[0] == 'connect':
-        # TODO: future improvement - verify user via RTM API
+        # TODO: setup OAuth and verify users via Slack API
         player = Player.query.filter_by(team_id=team_id, user_name=user_name).first()
         if player is not None:
-            msg = 'User %s has already connected to tic-slack-toe'
-            return response_data(msg % player.user_name, 'warning')
+            return response_data('You have already connected to tic-slack-toe', 'warning')
 
         player = create_player(team_id=team_id, user_name=user_name)
 
         return response_data((
-            "You (%s) are now connected to tic-slack-toe. There is no need to"
-            "reconnect unless your Slack user name changes.") % player.user_name, 'good')
+            "You (%s) are now connected to tic-slack-toe. There is no need to "
+            "reconnect unless your Slack user name changes") % player.user_name, 'good')
 
     elif args[0] == 'show':
         return board_response_data('', get_board(current_game), current_game)
 
     elif args[0] == 'start':
 
-        # ------------#
+        # ------------ #
         #  validation
-        # ------------#
+        # ------------ #
 
         if len(args) < 2:
             msg = 'Invalid arguments. to start: `/ticslacktoe start [username]`'
             return response_data(msg, 'danger')
 
         requested_player_name = args[1]
+
+        player1 = get_or_create_player(team_id, user_name)
+        if player1.user_name == requested_player_name:
+            return response_data('Cannot start game a game against oneself', 'danger')
 
         # requested player must have self-connected with the app previously
         player2 = Player.query.filter_by(team_id=team_id, user_name=requested_player_name).first()
@@ -110,11 +114,9 @@ def tic_slack_toe():
         if current_game is not None:
             return response_data('A game is already in progress', 'warning')
 
-        # -----------------#
+        # ----------------- #
         #  start new game
-        # -----------------#
-
-        player1 = get_or_create_player(team_id, user_name)
+        # ----------------- #
 
         game = Game(team_id, channel_id, player1, player2)
         db.session.add(game)
@@ -126,9 +128,9 @@ def tic_slack_toe():
 
     elif args[0] == 'play':
 
-        # ------------#
+        # ------------ #
         #  validation
-        # ------------#
+        # ------------ #
 
         if len(args) < 3:
             msg = 'Invalid arguments. to play: `/ticslacktoe play [x] [y]`'
@@ -171,9 +173,9 @@ def play(current_game, team_id, user_name, x, y):
                 position_x=i, position_y=j, player=player).first() for i, j in coords])
         return len(north_west_diagonal_pieces) == PIECES_PER_ROW
 
-    # -----------------#
+    # ----------------- #
     #  play validation
-    # -----------------#
+    # ----------------- #
 
     # game has not been started
     if current_game is None:
@@ -196,9 +198,9 @@ def play(current_game, team_id, user_name, x, y):
     if Piece.query.filter_by(game=current_game, position_x=x, position_y=y).first():
         return response_data("Position %d %d is already taken" % (x, y), 'warning')
 
-    # ------#
+    # ------ #
     #  play
-    # ------#
+    # ------ #
 
     # add the game piece
     piece = Piece(current_game, player, x, y)

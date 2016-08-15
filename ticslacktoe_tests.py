@@ -77,6 +77,12 @@ class TicSlackToeTestCase(TestCase):
         assert game in db.session
         self.assertEqual(game.turn, player1)
 
+        piece = Piece(game, player1, 0, 0)
+        db.session.add(piece)
+        db.session.commit()
+        assert piece in db.session
+        self.assertEqual(game.pieces.count(), 1)
+
     def test_default_response(self):
         response = self.post_form('')
         text = response.json.get('attachments')[0].get('text')
@@ -87,6 +93,25 @@ class TicSlackToeTestCase(TestCase):
         text = response.json.get('attachments')[0].get('text')
         self.assertIn('/ticslacktoe', text)
         self.assertIn('where x and y are coordinates', text)
+
+    # -------------------- #
+    #   connect tests
+    # -------------------- #
+
+    def test_connect_player(self):
+        self.assertEqual(Player.query.count(), 1)
+        response = self.post_form('connect')
+        self.assertEqual(Player.query.count(), 2)
+        text = response.json.get('attachments')[0].get('text')
+        self.assertIn('You (Steve) are now connected to tic-slack-toe.', text)
+
+        response = self.post_form('connect')
+        text = response.json.get('attachments')[0].get('text')
+        self.assertEqual(text, 'You have already connected to tic-slack-toe')
+
+    # -------------------- #
+    #    show tests
+    # -------------------- #
 
     def test_show_board(self):
         response = self.post_form('show')
@@ -104,6 +129,12 @@ class TicSlackToeTestCase(TestCase):
         text = response.json.get('attachments')[0].get('text')
         self.assertEqual(text, 'Invalid arguments. to start: `/ticslacktoe start [username]`')
 
+    def test_start_game_with_oneself(self):
+        response = self.post_form('start Steve')
+        text = response.json.get('attachments')[0].get('text')
+        expected = 'Cannot start a game against oneself'
+        self.assertEqual(text, expected)
+
     def test_start_game_user_validation(self):
         response = self.post_form('start Bob')
         text = response.json.get('attachments')[0].get('text')
@@ -116,9 +147,6 @@ class TicSlackToeTestCase(TestCase):
         response = self.post_form('start Bob')
         text = response.json.get('attachments')[0].get('text')
         self.assertEqual(text, 'A game is already in progress')
-
-    def test_get_or_create_players(self):
-        pass
 
     def test_create_game_and_players(self):
         response = self.post_form('start Rosa')
