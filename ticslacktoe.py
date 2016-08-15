@@ -1,26 +1,13 @@
 import os
 
 from flask import Flask, jsonify, url_for, redirect, request
-from flask_dance.contrib.slack import make_slack_blueprint, slack
 from flask_sqlalchemy import SQLAlchemy
 from flask_heroku import Heroku
-from werkzeug.contrib.fixers import ProxyFix
-from slackclient import SlackClient
-
 
 app = Flask(__name__)
-app.wsgi_app = ProxyFix(app.wsgi_app)
 
 app.config['SQLALCHEMY_DATABASE_URI'] = os.environ['DATABASE_URL']
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-
-app.secret_key = 'sosecretblah'
-app.config['SLACK_OAUTH_CLIENT_ID'] = os.environ.get("SLACK_OAUTH_CLIENT_ID")
-app.config['SLACK_OAUTH_CLIENT_SECRET'] = os.environ.get("SLACK_OAUTH_CLIENT_SECRET")
-
-slack_bp = make_slack_blueprint(scope=["identify,chat:write:bot"])
-app.register_blueprint(slack_bp, url_prefix='/login')
-slack_client = SlackClient('xoxp-67708760471-68778205813-69333865026-a746f316f2')
 
 heroku = Heroku(app)
 db = SQLAlchemy(app)
@@ -78,13 +65,6 @@ def tic_slack_toe():
     #       can be moved to an environment variable on Heroku
     if token != '6quahLsQgU7EJIOoENkl66vp':
         return response_data('Unauthorized request', 'danger')
-
-    # TODO: future improvement - verify user, team, channel via RTM API
-    api_call = slack_client.api_call('users.list')
-    print api_call
-    if api_call.get('ok'):
-        users = api_call.get('members')
-        print users
 
     args = text.split()
 
@@ -250,35 +230,6 @@ def play(current_game, team_id, user_name, x, y):
 
 @app.route('/')
 def welcome():
-    if not slack.authorized:
-        print 'not authorized redirect'
-        return redirect(url_for('slack.login'))
-
-    print 'authorized'
-    resp = slack.post("chat.postMessage", data={
-        "channel": "#random",
-        "text": "Hello, world!",
-        "icon_emoji": ":robot_face:",
-    })
-    assert resp.json()["ok"], resp.text
-
     return jsonify("Welcome to Tic Slack Toe! Use command '/ticslacktoe help'"
         "in a channel on https://ae28032589test0.slack.com/ to begin.")
 
-@app.route('/login/slack/authorized')
-def authorized():
-    'redirected'
-    # if not slack.authorized:
-    #     print 'not authorized redirect'
-    #     return redirect(url_for('slack.login'))
-
-    print 'authorized'
-    resp = slack.post("chat.postMessage", data={
-        "channel": "#random",
-        "text": "Hello, world!",
-        "icon_emoji": ":robot_face:",
-    })
-    assert resp.json()["ok"], resp.text
-
-    return jsonify("Welcome to Tic Slack Toe! Use command '/ticslacktoe help'"
-        "in a channel on https://ae28032589test0.slack.com/ to begin.")
